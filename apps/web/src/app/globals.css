@@ -17,3 +17,28 @@
 html { background: var(--color-ivory); color: var(--color-charcoal); }
 body { font-family: var(--font-sans); }
 :focus-visible { outline: 2px solid var(--color-forest); outline-offset: 2px; }
+
+/* ---- M2 semantic tokens (light default; dark reuses the same names) ---- */
+:root {
+  --canvas:#F5F5EF; --surface:#FFFFFF; --surface-2:#E9EDE3; --line:#DDE3D6;
+  --ink:#202923; --ink-muted:#5A645D;
+  --brand:#173C32; --brand-2:#315C46; --on-brand:#F5F5EF;
+  --sage:#A7B99A; --gold:#D5B76A;
+  --ok:#2E7D4F; --warn:#8A5A00; --bad:#B3402F;
+  --shadow:0 1px 2px rgb(23 60 50 / .06), 0 6px 20px rgb(23 60 50 / .06);
+}
+[data-theme="dark"] {
+  --canvas:#0F1A16; --surface:#16251F; --surface-2:#1D3028; --line:#2A4036;
+  --ink:#F5F5EF; --ink-muted:#A9B5AC;
+  --brand:#A7B99A; --brand-2:#D5B76A; --on-brand:#0F1A16;
+  --ok:#6FCF97; --warn:#E0B65A; --bad:#F08A7A;
+  --shadow:0 1px 2px rgb(0 0 0 / .3);
+}
+@theme inline {
+  --color-canvas: var(--canvas); --color-surface: var(--surface); --color-surface2: var(--surface-2);
+  --color-line: var(--line); --color-ink: var(--ink); --color-inkmuted: var(--ink-muted);
+  --color-brand: var(--brand); --color-brand2: var(--brand-2); --color-onbrand: var(--on-brand);
+  --color-ok: var(--ok); --color-warn: var(--warn); --color-bad: var(--bad);
+}
+.app-bg { background: var(--canvas); color: var(--ink); }
+.shadow-card { box-shadow: var(--shadow); }
