@@ -1,0 +1,11 @@
+{
+  "name": "FitSewa",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "postCreateCommand": "npm install -g pnpm@12.18.0 && pnpm install",
+  "forwardPorts": [3000, 4000],
+  "customizations": {
+    "vscode": {
+      "extensions": ["bradlc.vscode-tailwindcss", "dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+    }
+  }
+}

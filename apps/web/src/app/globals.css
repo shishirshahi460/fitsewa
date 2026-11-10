@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* FitSewa brand tokens (roadmap v1.0). Semantic names are finalized in M2. */
+@theme {
+  --color-forest: #173c32;
+  --color-primary: #315c46;
+  --color-sage: #a7b99a;
+  --color-gold: #d5b76a;
+  --color-ivory: #f5f5ef;
+  --color-charcoal: #202923;
+  --color-muted: #747d76;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 12px;
+  --radius-card-lg: 16px;
+}
+
+html { background: var(--color-ivory); color: var(--color-charcoal); }
+body { font-family: var(--font-sans); }
+:focus-visible { outline: 2px solid var(--color-forest); outline-offset: 2px; }
