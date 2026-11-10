@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { Badge, Card } from "@/components/ui/card";
 import { ProgressRing } from "@/components/ui/charts";
 
@@ -23,7 +23,7 @@ export default function Home() {
         <nav aria-label="Sections" className="hidden gap-6 text-sm font-medium md:flex">
           <a href="#features">Features</a><a href="#food">Nepali food</a><a href="#how">How it works</a>
         </nav>
-        <Button variant="secondary" disabled title="Sign in arrives in a later release">Sign in (soon)</Button>
+        <LinkButton href="/login" variant="secondary">Sign in</LinkButton>
       </header>
 
       <main>
@@ -33,7 +33,7 @@ export default function Home() {
             <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight text-brand md:text-5xl">Move Better.<br />Live Healthier.</h1>
             <p className="mt-4 max-w-md text-lg text-inkmuted">FitSewa helps you track Nepali food, follow simple workouts and see your progress, all in one place.</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button disabled title="Registration opens in a later release">Get started (coming soon)</Button>
+              <LinkButton href="/register">Get started</LinkButton>
               <a href="#how" className="inline-flex min-h-12 items-center px-2 text-sm font-semibold text-brand underline-offset-4 hover:underline">See how it works</a>
             </div>
           </div>
