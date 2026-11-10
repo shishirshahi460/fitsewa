@@ -6,7 +6,10 @@ const envSchema = z.object({
   MONGODB_URI: z.string().optional(),
   CORS_ORIGINS: z.string().default("http://localhost:3000"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "silent"]).default("info"),
-  JWT_ACCESS_SECRET: z.string().min(32).optional()
+  JWT_ACCESS_SECRET: z.string().min(32).optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("FitSewa <onboarding@resend.dev>"),
+  WEB_BASE_URL: z.url().optional()
 });
 
 export type Config = ReturnType<typeof loadConfig>;
@@ -21,5 +24,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   }
   // Development/test fallback only. Never used in production (checked above).
   const jwtSecret = parsed.data.JWT_ACCESS_SECRET ?? "dev-only-secret-not-for-production-use-0123456789";
-  return { ...parsed.data, corsOrigins, jwtSecret, isProd: parsed.data.NODE_ENV === "production" };
+  const webBaseUrl = (parsed.data.WEB_BASE_URL ?? corsOrigins[0] ?? "http://localhost:3000").replace(/\/$/, "");
+  return { ...parsed.data, corsOrigins, jwtSecret, webBaseUrl, isProd: parsed.data.NODE_ENV === "production" };
 }

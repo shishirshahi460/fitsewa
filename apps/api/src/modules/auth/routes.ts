@@ -1,9 +1,10 @@
 import { Router, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import type { ZodType } from "zod";
-import { loginSchema, registerSchema } from "@fitsewa/shared";
+import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyEmailSchema } from "@fitsewa/shared";
 import type { Config } from "../../config.js";
 import { HttpError } from "../../errors.js";
+import { requestPasswordReset, resetPassword, sendVerification, verifyEmail } from "./account-flows.js";
 import { ACCESS_COOKIE, REFRESH_COOKIE, requireAuth } from "./middleware.js";
 import * as svc from "./service.js";
 import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS } from "./tokens.js";
@@ -22,6 +23,11 @@ export function authRoutes(config: Config) {
     windowMs: 15 * 60 * 1000, limit: config.NODE_ENV === "test" ? 1000 : 20, standardHeaders: "draft-8", legacyHeaders: false,
     handler: (_req, _res, next) => next(new HttpError(429, "RATE_LIMITED", "Too many attempts. Try again later."))
   });
+  const mailLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, limit: config.NODE_ENV === "test" ? 1000 : 5, standardHeaders: "draft-8", legacyHeaders: false,
+    handler: (_req, _res, next) => next(new HttpError(429, "RATE_LIMITED", "Too many requests. Try again later."))
+  });
+  const logFail = (what: string) => (e: unknown) => console.error(`${what} failed:`, e instanceof Error ? e.message : e);
   const base = { httpOnly: true, secure: config.isProd, sameSite: "lax" as const };
   const setCookies = (res: Response, r: svc.AuthResult) => {
     res.cookie(ACCESS_COOKIE, r.accessToken, { ...base, path: "/", maxAge: ACCESS_TTL_SECONDS * 1000 });
@@ -36,6 +42,7 @@ export function authRoutes(config: Config) {
   router.post("/register", limiter, async (req, res) => {
     const r = await svc.register(parse(registerSchema, req.body), config, ctx(req));
     setCookies(res, r);
+    void sendVerification(r.user.id, r.user.email, config).catch(logFail("verification email"));
     res.status(201).json({ user: r.user });
   });
   router.post("/login", limiter, async (req, res) => {
@@ -49,6 +56,30 @@ export function authRoutes(config: Config) {
       setCookies(res, r);
       res.json({ user: r.user });
     } catch (e) { clear(res); throw e; }
+  });
+  router.post("/verify-email", limiter, async (req, res) => {
+    await verifyEmail(parse(verifyEmailSchema, req.body).token, ctx(req));
+    res.json({ ok: true });
+  });
+  router.post("/resend-verification", mailLimiter, requireAuth(config), async (req, res) => {
+    const user = await svc.getUser(req.auth!.userId);
+    if (user.emailVerified) { res.json({ ok: true, alreadyVerified: true }); return; }
+    let sent: boolean;
+    try { sent = await sendVerification(user.id, user.email, config); }
+    catch (e) { logFail("verification email")(e); throw new HttpError(502, "EMAIL_FAILED", "We could not send the email. Please try again later."); }
+    if (!sent) throw new HttpError(429, "RATE_LIMITED", "Please wait a minute before asking for another email.");
+    res.json({ ok: true });
+  });
+  router.post("/forgot-password", mailLimiter, async (req, res) => {
+    const { email } = parse(forgotPasswordSchema, req.body);
+    void requestPasswordReset(email, config, ctx(req)).catch(logFail("password reset email")); // same response either way
+    res.status(202).json({ ok: true });
+  });
+  router.post("/reset-password", limiter, async (req, res) => {
+    const { token, password } = parse(resetPasswordSchema, req.body);
+    await resetPassword(token, password, ctx(req));
+    clear(res);
+    res.json({ ok: true });
   });
   router.post("/logout", async (req, res) => {
     await svc.logout(req.cookies?.[REFRESH_COOKIE], ctx(req));
