@@ -5,19 +5,21 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   MONGODB_URI: z.string().optional(),
   CORS_ORIGINS: z.string().default("http://localhost:3000"),
-  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "silent"]).default("info")
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "silent"]).default("info"),
+  JWT_ACCESS_SECRET: z.string().min(32).optional()
 });
 
 export type Config = ReturnType<typeof loadConfig>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const parsed = envSchema.safeParse(env);
-  if (!parsed.success) {
-    throw new Error(`Invalid environment configuration: ${parsed.error.message}`);
-  }
+  if (!parsed.success) throw new Error(`Invalid environment configuration: ${parsed.error.message}`);
   const corsOrigins = parsed.data.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean);
-  if (corsOrigins.some((o) => o === "*")) {
-    throw new Error("CORS_ORIGINS must list exact origins; wildcard is not allowed.");
+  if (corsOrigins.some((o) => o === "*")) throw new Error("CORS_ORIGINS must list exact origins; wildcard is not allowed.");
+  if (parsed.data.NODE_ENV === "production" && !parsed.data.JWT_ACCESS_SECRET) {
+    throw new Error("JWT_ACCESS_SECRET (at least 32 characters) is required in production.");
   }
-  return { ...parsed.data, corsOrigins };
+  // Development/test fallback only. Never used in production (checked above).
+  const jwtSecret = parsed.data.JWT_ACCESS_SECRET ?? "dev-only-secret-not-for-production-use-0123456789";
+  return { ...parsed.data, corsOrigins, jwtSecret, isProd: parsed.data.NODE_ENV === "production" };
 }
