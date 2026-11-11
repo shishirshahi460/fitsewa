@@ -38,6 +38,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <Field id="email" name="email" type="email" label="Email" autoComplete="email" required error={errors.email} />
         <Field id="password" name="password" type="password" label="Password" required error={errors.password}
           autoComplete={isRegister ? "new-password" : "current-password"} hint={isRegister ? "At least 10 characters." : undefined} />
+        {!isRegister && <Link href="/forgot-password" className="-mt-2 self-start text-sm font-semibold text-brand underline-offset-4 hover:underline">Forgot password?</Link>}
         {isRegister && (
           <>
             <Field id="dob" name="dateOfBirth" type="date" label="Date of birth" required error={errors.dateOfBirth}

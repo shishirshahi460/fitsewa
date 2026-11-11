@@ -4,7 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "FitSewa: Move Better. Live Healthier.",
-  description: "Nepal-focused fitness, nutrition and wellness platform (in development)."
+  description: "Nepal-focused fitness, nutrition and wellness platform (in development).",
+  referrer: "no-referrer" // keeps one-time email links out of Referer headers
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
