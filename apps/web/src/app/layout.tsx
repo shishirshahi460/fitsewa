@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/inter";
+import "@fontsource/noto-sans-devanagari/400.css";
+import "@fontsource/noto-sans-devanagari/500.css";
+import "@fontsource/noto-sans-devanagari/700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

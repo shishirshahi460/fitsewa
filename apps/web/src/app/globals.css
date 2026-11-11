@@ -9,7 +9,7 @@
   --color-ivory: #f5f5ef;
   --color-charcoal: #202923;
   --color-muted: #747d76;
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Noto Sans Devanagari", ui-sans-serif, system-ui, sans-serif;
   --radius-card: 12px;
   --radius-card-lg: 16px;
 }
