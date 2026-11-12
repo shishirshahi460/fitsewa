@@ -15,7 +15,14 @@ export function ageOn(dob: string, now: Date): number | null {
 
 const isEmpty = (v: unknown) => v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
 
-export function validateAnswer(q: Question, value: unknown, now = new Date()): ErrorCode | null {
+export function validateAnswer(q: Question, value: unknown, now = new Date(), answers: Answers = {}): ErrorCode | null {
+  const basic = basicValidate(q, value, now);
+  if (basic || isEmpty(value)) return basic;
+  return q.check ? q.check(value, answers) : null;
+}
+
+function basicValidate(q: Question, value: unknown, now: Date): ErrorCode | null {
+  if (q.type === "info") return null;
   if (isEmpty(value)) return q.required ? "required" : null;
   switch (q.type) {
     case "single":
@@ -28,6 +35,7 @@ export function validateAnswer(q: Question, value: unknown, now = new Date()): E
     }
     case "number":
       if (typeof value !== "number" || !Number.isFinite(value)) return "invalid";
+      if (q.integer && !Number.isInteger(value)) return "invalid";
       if (q.min !== undefined && value < q.min) return "too_low";
       if (q.max !== undefined && value > q.max) return "too_high";
       return null;

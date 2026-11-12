@@ -3,14 +3,17 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  QUESTIONS, copy, ui, validateAnswer, visibleQuestions, pruneHidden, toggleMulti,
-  type Answers, type Lang, type Question
+  QUESTIONS, copy, ui, validateAnswer, visibleQuestions, pruneHidden, toggleMulti, bmi, weeklyPaceKg, round1, round2,
+  cmToFtIn, ftInToCm, kgToLb, KG_PER_LB, CM_PER_INCH, RECOMMENDED_MAX_KG_PER_WEEK,
+  FOODS, FOOD_GROUPS, foodAllowedForDiet, reconcileAnswers,
+  type Answers, type Lang, type Question, type UiCopy
 } from "@fitsewa/shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/input";
 
 const qs: readonly Question[] = QUESTIONS;
+type SetFn = (id: string, v: unknown) => void;
 
 function AnswerCard({ label, selected, onClick, multi }: { label: string; selected: boolean; onClick: () => void; multi?: boolean }) {
   return (
@@ -23,6 +26,107 @@ function AnswerCard({ label, selected, onClick, multi }: { label: string; select
     >
       {label}
     </button>
+  );
+}
+
+function Chip({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={selected}
+      onClick={onClick}
+      className={`min-h-11 rounded-full border px-4 py-2 text-sm font-medium transition ${selected ? "border-brand bg-brand text-onbrand" : "border-line bg-surface text-ink hover:bg-surface2"}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Grouped food chooser. Hides foods that clash with the chosen diet or with the person's other food answers. */
+function FoodPicker({ q, answers, set, lang }: { q: Question; answers: Answers; set: SetFn; lang: Lang }) {
+  const list = (id: string) => (Array.isArray(answers[id]) ? (answers[id] as string[]) : []);
+  const current = list(q.id);
+  const hidden = q.id === "disliked_foods" ? list("liked_foods") : q.id === "frequent_meals" ? list("disliked_foods") : [];
+  return (
+    <div className="mt-5 space-y-5">
+      {FOOD_GROUPS.map((g) => {
+        const foods = FOODS.filter((f) => f.group === g.id && foodAllowedForDiet(f, answers["diet_type"]) && !hidden.includes(f.id));
+        if (foods.length === 0) return null;
+        return (
+          <div key={g.id} role="group" aria-label={g[lang]}>
+            <h2 className="mb-2 text-sm font-semibold text-inkmuted">{g[lang]}</h2>
+            <div className="flex flex-wrap gap-2">
+              {foods.map((f) => (
+                <Chip key={f.id} label={f[lang]} selected={current.includes(f.id)}
+                  onClick={() => set(q.id, current.includes(f.id) ? current.filter((x) => x !== f.id) : [...current, f.id])} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One number field. Shows the person's chosen unit; the answer is always stored in kg or cm. */
+function MeasureInput({ q, answers, set, label }: { q: Question; answers: Answers; set: SetFn; label: string }) {
+  const lbs = q.unit === "kg" && answers["weight_unit"] === "lb";
+  const inches = q.unit === "cm" && answers["height_unit"] === "ft_in";
+  const factor = lbs ? KG_PER_LB : inches ? CM_PER_INCH : 1;
+  const unit = lbs ? "lb" : inches ? "in" : q.unit;
+  const stored = typeof answers[q.id] === "number" ? (answers[q.id] as number) : undefined;
+  const [text, setText] = useState(stored === undefined ? "" : String(round1(stored / factor)));
+  return (
+    <Field id={q.id} type="number" inputMode={q.integer ? "numeric" : "decimal"} step={q.integer ? "1" : "any"} label={unit ? `${label} (${unit})` : label} value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        const n = Number(e.target.value);
+        set(q.id, e.target.value === "" || !Number.isFinite(n) ? undefined : round2(n * factor));
+      }} />
+  );
+}
+
+function FeetInchesInput({ q, answers, set, t }: { q: Question; answers: Answers; set: SetFn; t: UiCopy }) {
+  const stored = typeof answers[q.id] === "number" ? cmToFtIn(answers[q.id] as number) : undefined;
+  const [ft, setFt] = useState(stored ? String(stored.ft) : "");
+  const [inch, setInch] = useState(stored ? String(stored.inch) : "");
+  const update = (f: string, i: string) => {
+    const fn = Number(f), inn = Number(i || 0);
+    set(q.id, f === "" || !Number.isFinite(fn) || !Number.isFinite(inn) ? undefined : ftInToCm(fn, inn));
+  };
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <Field id="feet" type="number" inputMode="numeric" step="1" label={t.feet} value={ft} onChange={(e) => { setFt(e.target.value); update(e.target.value, inch); }} />
+      <Field id="inches" type="number" inputMode="decimal" step="any" label={t.inches} value={inch} onChange={(e) => { setInch(e.target.value); update(ft, e.target.value); }} />
+    </div>
+  );
+}
+
+function BmiCard({ answers, t }: { answers: Answers; t: UiCopy }) {
+  const w = answers["weight_kg"] as number, h = answers["height_cm"] as number;
+  const value = bmi(w, h);
+  const pos = Math.min(Math.max((value - 15) / 25, 0), 1) * 100;
+  const lbs = answers["weight_unit"] === "lb";
+  const show = (kg: number) => (lbs ? `${round1(kgToLb(kg))} lb` : `${round1(kg)} kg`);
+  const target = typeof answers["target_weight_kg"] === "number" ? (answers["target_weight_kg"] as number) : undefined;
+  return (
+    <div className="mt-5">
+      <p className="text-4xl font-bold tracking-tight">{value}<span className="ml-2 text-base font-medium text-inkmuted">{t.bmiLabel}</span></p>
+      <div className="relative mt-4 h-3 rounded-full bg-surface2" role="img" aria-label={`${t.bmiScale}: ${value}`}>
+        {[18.5, 23, 27.5].map((x) => <span key={x} className="absolute top-0 h-3 w-px bg-sage" style={{ left: `${((x - 15) / 25) * 100}%` }} />)}
+        <span className="absolute -top-1 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-surface bg-brand" style={{ left: `${pos}%` }} />
+      </div>
+      <dl className="mt-5 space-y-2 text-sm">
+        <div className="flex justify-between"><dt className="text-inkmuted">{t.currentLabel}</dt><dd className="font-medium">{show(w)}</dd></div>
+        {target !== undefined && (
+          <>
+            <div className="flex justify-between"><dt className="text-inkmuted">{t.targetLabel}</dt><dd className="font-medium">{show(target)}</dd></div>
+            <div className="flex justify-between"><dt className="text-inkmuted">{t.differenceLabel}</dt><dd className="font-medium">{show(Math.abs(target - w))}</dd></div>
+          </>
+        )}
+      </dl>
+    </div>
   );
 }
 
@@ -39,17 +143,17 @@ export function OnboardingFlow() {
   const c = q ? copy[lang][q.id as keyof (typeof copy)["en"]] : undefined;
   const value = q ? (answers[q.id] ?? q.defaultValue) : undefined;
 
-  function set(id: string, v: unknown) {
-    setAnswers((prev) => pruneHidden(qs, { ...prev, [id]: v }));
+  const set: SetFn = (id, v) => {
+    setAnswers((prev) => reconcileAnswers(pruneHidden(qs, { ...prev, [id]: v })));
     setError("");
     if (id === "language" && (v === "en" || v === "ne")) setLang(v);
-  }
+  };
 
   function restart() { setAnswers({}); setIndex(0); setStopped(false); setError(""); }
 
   function next() {
     if (!q) return;
-    const code = validateAnswer(q, value);
+    const code = validateAnswer(q, value, new Date(), answers);
     if (code === "minor") { setAnswers({}); setStopped(true); return; } // keep nothing
     if (code) { setError(t.errors[code]); return; }
     if (answers[q.id] === undefined && value !== undefined) set(q.id, value);
@@ -93,6 +197,7 @@ export function OnboardingFlow() {
 
   const pct = Math.round((index / Math.max(visible.length, 1)) * 100);
   const today = new Date().toISOString().slice(0, 10);
+  const pace = q.id === "timeframe" ? weeklyPaceKg({ ...answers, timeframe: value }) : null;
   return shell(
     <>
       <div className="mb-6">
@@ -119,7 +224,8 @@ export function OnboardingFlow() {
             {q.options?.map((o) => <AnswerCard key={o} label={c.options?.[o] ?? o} selected={value === o} onClick={() => set(q.id, o)} />)}
           </div>
         )}
-        {q.type === "multi" && (
+        {q.type === "multi" && q.picker === "food" && <FoodPicker q={q} answers={answers} set={set} lang={lang} />}
+        {q.type === "multi" && q.picker !== "food" && (
           <div role="group" aria-label={c.title} className="mt-5 grid gap-3 sm:grid-cols-2">
             {q.options?.map((o) => {
               const cur = Array.isArray(value) ? (value as string[]) : [];
@@ -128,13 +234,18 @@ export function OnboardingFlow() {
           </div>
         )}
         {q.type === "number" && (
-          <div className="mt-5"><Field id={q.id} type="number" inputMode="decimal" label={c.title} min={q.min} max={q.max}
-            value={typeof value === "number" ? value : ""} onChange={(e) => set(q.id, e.target.value === "" ? undefined : Number(e.target.value))} /></div>
+          <div className="mt-5" key={q.id}>
+            {q.id === "height_cm" && answers["height_unit"] === "ft_in"
+              ? <FeetInchesInput q={q} answers={answers} set={set} t={t} />
+              : <MeasureInput q={q} answers={answers} set={set} label={c.title} />}
+          </div>
         )}
         {q.type === "dob" && (
           <div className="mt-5"><Field id={q.id} type="date" label={t.dobLabel} max={today}
             value={typeof value === "string" ? value : ""} onChange={(e) => set(q.id, e.target.value)} error={error} /></div>
         )}
+        {q.type === "info" && <BmiCard answers={answers} t={t} />}
+        {pace !== null && pace > RECOMMENDED_MAX_KG_PER_WEEK && <p role="status" className="mt-4 rounded-card bg-surface2 px-3 py-2 text-sm">{t.paceHint}</p>}
         {error && q.type !== "dob" && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
 
         {q.type !== "consent" && (
