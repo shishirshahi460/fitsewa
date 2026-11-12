@@ -18,6 +18,8 @@ export interface Question {
   readonly integer?: boolean;
   /** Use the grouped food chooser for this multi-select question. */
   readonly picker?: "food";
+  /** Marks data that needs extra protection when stored (body measurements, allergies, health flags). */
+  readonly sensitivity?: "body" | "allergy" | "health";
   /** Hidden unless the person agreed to health and lifestyle data processing. */
   readonly requiresConsent?: boolean;
   readonly defaultValue?: unknown;

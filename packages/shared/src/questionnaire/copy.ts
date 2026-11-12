@@ -1,4 +1,5 @@
 import type { QuestionId } from "./definition.js";
+import { moreCopy, type MoreId } from "./copy-more.js";
 import { foodLabels } from "./foods.js";
 import type { ErrorCode, Lang } from "./types.js";
 
@@ -9,7 +10,7 @@ export interface QuestionCopy {
   bullets?: readonly string[];
 }
 
-export const copy: Record<Lang, Record<QuestionId, QuestionCopy>> = {
+const baseCopy: Record<Lang, Record<Exclude<QuestionId, MoreId>, QuestionCopy>> = {
   en: {
     language: { title: "Preferred language", options: { en: "English", ne: "नेपाली" } },
     weight_unit: { title: "Which weight unit do you prefer?", options: { kg: "Kilograms (kg)", lb: "Pounds (lb)" } },
@@ -268,6 +269,11 @@ export const copy: Record<Lang, Record<QuestionId, QuestionCopy>> = {
   }
 };
 
+export const copy: Record<Lang, Record<QuestionId, QuestionCopy>> = {
+  en: { ...baseCopy.en, ...moreCopy.en },
+  ne: { ...baseCopy.ne, ...moreCopy.ne }
+};
+
 export interface UiCopy {
   back: string; next: string; skip: string; step: string; startAgain: string;
   dobLabel: string; errors: Record<ErrorCode, string>;
@@ -289,7 +295,7 @@ export const ui: Record<Lang, UiCopy> = {
     },
     minorTitle: "FitSewa is for adults (18+)", minorBody: "We cannot continue yet. We have not saved any of your answers.",
     declinedTitle: "No problem", declinedBody: "You can still create a FitSewa account. We will not personalise your plan.", createAccount: "Create an account",
-    builtSoFarTitle: "Development preview", builtSoFarBody: "Sections A to E and the consent screen are built so far. The next sections arrive in the following steps.",
+    builtSoFarTitle: "Development preview", builtSoFarBody: "All question sections (A to I) are built. The summary, plan preview and account step come next.",
     feet: "Feet", inches: "Inches", bmiLabel: "BMI", bmiScale: "BMI on a scale from 15 to 40",
     currentLabel: "Current weight", targetLabel: "Target weight", differenceLabel: "Difference",
     paceHint: "That is faster than the pace we recommend. We will plan for a gentler pace."
@@ -304,7 +310,7 @@ export const ui: Record<Lang, UiCopy> = {
     },
     minorTitle: "फिटसेवा वयस्क (१८+) का लागि हो", minorBody: "हामी अहिले अगाडि बढ्न सक्दैनौं। तपाईंका कुनै पनि उत्तर हामीले सुरक्षित गरेका छैनौं।",
     declinedTitle: "ठीक छ", declinedBody: "तपाईं अझै फिटसेवा खाता बनाउन सक्नुहुन्छ। हामी तपाईंको योजना व्यक्तिगत बनाउने छैनौं।", createAccount: "खाता बनाउनुहोस्",
-    builtSoFarTitle: "विकास पूर्वावलोकन", builtSoFarBody: "अहिलेसम्म खण्ड A देखि E सम्म र सहमति स्क्रिन बनेको छ। अरू खण्डहरू आगामी चरणमा आउँछन्।",
+    builtSoFarTitle: "विकास पूर्वावलोकन", builtSoFarBody: "सबै प्रश्न खण्ड (A देखि I) बनिसकेका छन्। सारांश, योजना पूर्वावलोकन र खाता बनाउने चरण अब आउँछन्।",
     feet: "फिट", inches: "इन्च", bmiLabel: "BMI", bmiScale: "१५ देखि ४० सम्मको BMI स्केल",
     currentLabel: "हालको तौल", targetLabel: "लक्षित तौल", differenceLabel: "फरक",
     paceHint: "यो हामीले सिफारिस गरेको गतिभन्दा छिटो छ। हामी बढी सहज गतिमा योजना बनाउँछौं।"

@@ -3,4 +3,5 @@ export * from "./definition.js";
 export * from "./engine.js";
 export * from "./body.js";
 export * from "./foods.js";
+export * from "./safety.js";
 export * from "./copy.js";

@@ -244,7 +244,7 @@ export function OnboardingFlow() {
           <div className="mt-5"><Field id={q.id} type="date" label={t.dobLabel} max={today}
             value={typeof value === "string" ? value : ""} onChange={(e) => set(q.id, e.target.value)} error={error} /></div>
         )}
-        {q.type === "info" && <BmiCard answers={answers} t={t} />}
+        {q.id === "bmi_summary" && <BmiCard answers={answers} t={t} />}
         {pace !== null && pace > RECOMMENDED_MAX_KG_PER_WEEK && <p role="status" className="mt-4 rounded-card bg-surface2 px-3 py-2 text-sm">{t.paceHint}</p>}
         {error && q.type !== "dob" && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
 

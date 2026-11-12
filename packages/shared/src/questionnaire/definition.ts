@@ -1,5 +1,6 @@
 import { BMI_MIN_TARGET, bmi } from "./body.js";
 import { FOOD_IDS } from "./foods.js";
+import { isCautionMode } from "./safety.js";
 import type { Answers, Question } from "./types.js";
 
 export const QUESTIONNAIRE_VERSION = "onboarding-v1";
@@ -7,9 +8,15 @@ export const QUESTIONNAIRE_VERSION = "onboarding-v1";
 const weightGoal = (a: Answers) => a["primary_goal"] === "lose_weight" || a["primary_goal"] === "gain_weight";
 const worksOrStudies = (a: Answers) => a["occupation"] !== "unemployed" && a["occupation"] !== "retired";
 const cooks = (a: Answers) => a["cooking_skill"] !== "cannot_cook";
+const healthOptIn = (a: Answers) => a["health_section_opt_in"] === "yes";
+const pregnancyAsked = (a: Answers) => healthOptIn(a) && a["gender"] !== "male";
+const equipmentRelevant = (a: Answers) => {
+  const where = a["exercise_setting"];
+  return !Array.isArray(where) || where.length === 0 || where.includes("home") || where.includes("gym");
+};
 const hasBody = (a: Answers) => typeof a["weight_kg"] === "number" && typeof a["height_cm"] === "number";
 
-/** Sections A, consent, B, C, D and E. Sections F to I are added in later steps.
+/** All question sections: A, consent, B, C, D, E, F, G, H and I.
  *  Order note: height and weight are asked before the target weight so the target can be checked against them. */
 export const QUESTIONS = [
   { id: "language", section: "A", type: "single", required: true, options: ["en", "ne"] },
@@ -23,11 +30,11 @@ export const QUESTIONS = [
     options: ["lose_weight", "gain_weight", "maintain_weight", "build_muscle", "improve_strength", "improve_stamina",
       "improve_mobility", "improve_overall_fitness", "improve_nutrition", "undecided"]
   },
-  { id: "height_cm", section: "C", type: "number", required: true, requiresConsent: true, unit: "cm", min: 100, max: 250 },
-  { id: "weight_kg", section: "C", type: "number", required: true, requiresConsent: true, unit: "kg", min: 30, max: 300 },
+  { id: "height_cm", section: "C", type: "number", required: true, requiresConsent: true, sensitivity: "body", unit: "cm", min: 100, max: 250 },
+  { id: "weight_kg", section: "C", type: "number", required: true, requiresConsent: true, sensitivity: "body", unit: "kg", min: 30, max: 300 },
   { id: "energy_basis", section: "C", type: "single", required: false, requiresConsent: true, options: ["female_based", "male_based", "average", "prefer_not"] },
   {
-    id: "target_weight_kg", section: "B", type: "number", required: true, requiresConsent: true, unit: "kg", min: 30, max: 300,
+    id: "target_weight_kg", section: "B", type: "number", required: true, requiresConsent: true, sensitivity: "body", unit: "kg", min: 30, max: 300,
     showWhen: weightGoal,
     check: (v, a) => {
       if (typeof v !== "number") return null;
@@ -39,8 +46,8 @@ export const QUESTIONS = [
   },
   { id: "timeframe", section: "B", type: "single", required: false, requiresConsent: true, options: ["12_weeks", "6_months", "12_months", "flexible"], showWhen: weightGoal },
   { id: "prior_weight_experience", section: "B", type: "single", required: false, requiresConsent: true, options: ["none", "tried_alone", "tried_with_professional"], showWhen: weightGoal },
-  { id: "waist_cm", section: "C", type: "number", required: false, requiresConsent: true, unit: "cm", min: 40, max: 200 },
-  { id: "hip_cm", section: "C", type: "number", required: false, requiresConsent: true, unit: "cm", min: 40, max: 200 },
+  { id: "waist_cm", section: "C", type: "number", required: false, requiresConsent: true, sensitivity: "body", unit: "cm", min: 40, max: 200 },
+  { id: "hip_cm", section: "C", type: "number", required: false, requiresConsent: true, sensitivity: "body", unit: "cm", min: 40, max: 200 },
   { id: "bmi_summary", section: "C", type: "info", required: true, requiresConsent: true, showWhen: hasBody },
   { id: "activity_level", section: "D", type: "single", required: true, requiresConsent: true, options: ["not_active", "lightly_active", "moderately_active", "active", "very_active"] },
   { id: "daily_walking", section: "D", type: "single", required: false, requiresConsent: true, options: ["under_3k", "3k_6k", "6k_9k", "over_9k", "not_sure"] },
@@ -61,7 +68,39 @@ export const QUESTIONS = [
   { id: "diet_type", section: "E", type: "single", required: true, requiresConsent: true, options: ["vegetarian", "non_vegetarian", "vegan", "eggetarian", "pescatarian", "no_preference"] },
   { id: "liked_foods", section: "E", type: "multi", required: false, requiresConsent: true, options: FOOD_IDS, picker: "food" },
   { id: "disliked_foods", section: "E", type: "multi", required: false, requiresConsent: true, options: FOOD_IDS, picker: "food" },
-  { id: "frequent_meals", section: "E", type: "multi", required: false, requiresConsent: true, options: FOOD_IDS, picker: "food" }
+  { id: "frequent_meals", section: "E", type: "multi", required: false, requiresConsent: true, options: FOOD_IDS, picker: "food" },
+  {
+    id: "allergies", section: "F", type: "multi", required: true, requiresConsent: true, sensitivity: "allergy",
+    options: ["lactose", "milk_protein", "nuts", "eggs", "fish", "seafood", "gluten", "soy", "other", "none", "prefer_not_to_answer"],
+    exclusive: ["none", "prefer_not_to_answer"]
+  },
+  { id: "dietary_requirements", section: "F", type: "multi", required: false, requiresConsent: true, options: ["no_beef", "no_pork", "no_alcohol", "fasting_periods", "other"] },
+  { id: "food_budget", section: "F", type: "single", required: false, requiresConsent: true, options: ["low", "medium", "flexible"] },
+  { id: "eating_out", section: "F", type: "single", required: false, requiresConsent: true, options: ["never", "weekly_1_2", "weekly_3_5", "daily"] },
+  { id: "health_section_opt_in", section: "G", type: "single", required: false, requiresConsent: true, options: ["yes", "no"], defaultValue: "no" },
+  {
+    id: "conditions", section: "G", type: "multi", required: false, requiresConsent: true, sensitivity: "health", showWhen: healthOptIn,
+    options: ["high_blood_pressure", "heart_disease", "high_cholesterol", "diabetes", "kidney_disease", "osteoarthritis", "other", "none", "prefer_not"],
+    exclusive: ["none", "prefer_not"]
+  },
+  { id: "takes_medication", section: "G", type: "single", required: false, requiresConsent: true, sensitivity: "health", showWhen: healthOptIn, options: ["yes", "no", "prefer_not"] },
+  { id: "activity_restricted", section: "G", type: "single", required: false, requiresConsent: true, sensitivity: "health", showWhen: healthOptIn, options: ["yes", "no", "prefer_not"] },
+  { id: "mobility_limitation", section: "G", type: "single", required: false, requiresConsent: true, sensitivity: "health", showWhen: healthOptIn, options: ["none", "some", "significant", "prefer_not"] },
+  { id: "needs_assistance", section: "G", type: "single", required: false, requiresConsent: true, sensitivity: "health", showWhen: healthOptIn, options: ["yes", "no", "prefer_not"] },
+  { id: "energy_level", section: "G", type: "single", required: false, requiresConsent: true, sensitivity: "health", showWhen: healthOptIn, options: ["1", "2", "3", "4", "5"] },
+  { id: "pregnancy_breastfeeding", section: "G", type: "single", required: false, requiresConsent: true, sensitivity: "health", showWhen: pregnancyAsked, options: ["yes", "no", "prefer_not"] },
+  { id: "caution_notice", section: "G", type: "info", required: true, requiresConsent: true, showWhen: isCautionMode },
+  { id: "pregnancy_notice", section: "G", type: "info", required: true, requiresConsent: true, showWhen: (a) => a["pregnancy_breastfeeding"] === "yes" },
+  { id: "experience_level", section: "H", type: "single", required: true, requiresConsent: true, options: ["complete_beginner", "beginner", "intermediate", "advanced", "athlete"] },
+  { id: "preferred_exercise", section: "H", type: "multi", required: false, requiresConsent: true, options: ["gym", "home", "walking", "running", "cycling", "swimming", "yoga", "strength", "cardio", "outdoor", "hiking_trekking"] },
+  { id: "equipment", section: "H", type: "multi", required: false, requiresConsent: true, showWhen: equipmentRelevant, options: ["none", "dumbbells", "resistance_bands", "bench_barbell", "full_gym", "yoga_mat", "bicycle", "treadmill"], exclusive: ["none"] },
+  { id: "workout_minutes", section: "H", type: "single", required: false, requiresConsent: true, options: ["20", "30", "45", "60", "90"] },
+  { id: "workout_days", section: "H", type: "multi", required: false, requiresConsent: true, options: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] },
+  { id: "intensity", section: "H", type: "single", required: false, requiresConsent: true, options: ["light", "moderate", "vigorous", "not_sure"] },
+  { id: "extra_goals", section: "I", type: "multi", required: false, requiresConsent: true, options: ["run_5k", "build_muscle", "improve_strength", "more_energy", "sleep_better", "improve_mobility", "feel_healthier", "body_composition", "outdoor_activities", "sustainable_lifestyle"] },
+  { id: "past_attempts", section: "I", type: "single", required: false, requiresConsent: true, options: ["first_time", "tried_stopped", "tried_some_success", "consistent_now"] },
+  { id: "motivation_level", section: "I", type: "single", required: false, requiresConsent: true, options: ["1", "2", "3", "4", "5"] },
+  { id: "support_style", section: "I", type: "multi", required: false, requiresConsent: true, options: ["reminders", "community", "plan_only", "coaching_later"] }
 ] as const satisfies readonly Question[];
 
 export type QuestionId = (typeof QUESTIONS)[number]["id"];
