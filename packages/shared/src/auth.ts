@@ -33,6 +33,7 @@ const tokenField = z.string().min(20, "This link is not valid.").max(200, "This 
 export const verifyEmailSchema = z.object({ token: tokenField });
 export const forgotPasswordSchema = z.object({ email });
 export const resetPasswordSchema = z.object({ token: tokenField, password: passwordSchema });
+export const deleteAccountSchema = z.object({ password: z.string().min(1).max(128) });
 
 export interface PublicUser {
   id: string;

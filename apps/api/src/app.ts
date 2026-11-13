@@ -6,6 +6,7 @@ import { API_VERSION, type HealthResponse } from "@fitsewa/shared";
 import type { Config } from "./config.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { csrfOriginCheck } from "./modules/auth/middleware.js";
+import { accountRoutes } from "./modules/auth/account.js";
 import { authRoutes, userRoutes } from "./modules/auth/routes.js";
 
 export function createApp(config: Config): Express {
@@ -42,6 +43,7 @@ export function createApp(config: Config): Express {
   v1.use(csrfOriginCheck(config));
   v1.use("/auth", authRoutes(config));
   v1.use("/users", userRoutes(config));
+  v1.use("/users", accountRoutes(config));
   app.use(`/api/${API_VERSION}`, v1);
 
   app.use(notFoundHandler);
