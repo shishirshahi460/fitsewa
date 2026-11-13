@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/input";
+import { Results } from "./results";
 
 const qs: readonly Question[] = QUESTIONS;
 type SetFn = (id: string, v: unknown) => void;
@@ -191,8 +192,7 @@ export function OnboardingFlow() {
       </div></Card>);
   }
   if (!q || !c) {
-    return shell(<Card><h1 className="text-2xl font-bold tracking-tight">{t.builtSoFarTitle}</h1><p className="mt-3 text-inkmuted">{t.builtSoFarBody}</p>
-      <Button variant="secondary" className="mt-5" onClick={() => setIndex((i) => Math.max(i - 1, 0))}>{t.back}</Button></Card>);
+    return shell(<Results answers={answers} lang={lang} onBack={() => setIndex((i) => Math.max(i - 1, 0))} />);
   }
 
   const pct = Math.round((index / Math.max(visible.length, 1)) * 100);

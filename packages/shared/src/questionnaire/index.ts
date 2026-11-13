@@ -4,4 +4,7 @@ export * from "./engine.js";
 export * from "./body.js";
 export * from "./foods.js";
 export * from "./safety.js";
+export * from "./food-safety.js";
+export * from "./plan.js";
 export * from "./copy.js";
+export * from "./copy-plan.js";
