@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from "./errors.js";
 import { csrfOriginCheck } from "./modules/auth/middleware.js";
 import { accountRoutes } from "./modules/auth/account.js";
 import { authRoutes, userRoutes } from "./modules/auth/routes.js";
+import { onboardingRoutes } from "./modules/onboarding/routes.js";
 
 export function createApp(config: Config): Express {
   const app = express();
@@ -44,6 +45,7 @@ export function createApp(config: Config): Express {
   v1.use("/auth", authRoutes(config));
   v1.use("/users", userRoutes(config));
   v1.use("/users", accountRoutes(config));
+    v1.use("/onboarding", onboardingRoutes(config));
   app.use(`/api/${API_VERSION}`, v1);
 
   app.use(notFoundHandler);

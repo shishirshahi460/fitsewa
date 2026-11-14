@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   QUESTIONS, copy, ui, validateAnswer, visibleQuestions, pruneHidden, toggleMulti, bmi, weeklyPaceKg, round1, round2,
   cmToFtIn, ftInToCm, kgToLb, KG_PER_LB, CM_PER_INCH, RECOMMENDED_MAX_KG_PER_WEEK,
-  FOODS, FOOD_GROUPS, foodAllowedForDiet, reconcileAnswers,
+  FOODS, FOOD_GROUPS, foodAllowedForDiet, reconcileAnswers, saveUi,
   type Answers, type Lang, type Question, type UiCopy
 } from "@fitsewa/shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/input";
+import { createDraft, deleteDraft, getDraft, recordConsent, saveDraft, type DraftView } from "@/lib/onboarding-api";
 import { Results } from "./results";
 
 const qs: readonly Question[] = QUESTIONS;
@@ -132,17 +133,54 @@ function BmiCard({ answers, t }: { answers: Answers; t: UiCopy }) {
 }
 
 export function OnboardingFlow() {
-  // Answers live in memory only. Nothing is stored or sent anywhere yet (saving arrives in a later milestone).
   const [answers, setAnswers] = useState<Answers>({});
   const [lang, setLang] = useState<Lang>("en");
   const [index, setIndex] = useState(0);
   const [error, setError] = useState("");
   const [stopped, setStopped] = useState(false);
+  const [phase, setPhase] = useState<"loading" | "resume" | "flow">("loading");
+  const [pending, setPending] = useState<DraftView | null>(null);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const draftRef = useRef(false);
   const t = ui[lang];
+  const sv = saveUi[lang];
   const visible = useMemo(() => visibleQuestions(qs, answers), [answers]);
   const q = visible[index];
   const c = q ? copy[lang][q.id as keyof (typeof copy)["en"]] : undefined;
   const value = q ? (answers[q.id] ?? q.defaultValue) : undefined;
+
+  const markDraft = (v: boolean) => { draftRef.current = v; setHasDraft(v); };
+
+  useEffect(() => {
+    getDraft().then((r) => {
+      if (r.ok) {
+        markDraft(true);
+        if (r.data.draft.step > 0) {
+          setLang(r.data.draft.answers["language"] === "ne" ? "ne" : "en");
+          setPending(r.data.draft);
+          setPhase("resume");
+          return;
+        }
+      }
+      setPhase("flow");
+    });
+  }, []);
+
+  async function ensureDraft(): Promise<boolean> {
+    if (draftRef.current) return true;
+    const r = await createDraft();
+    if (r.ok) markDraft(true);
+    return r.ok;
+  }
+
+  /** Saves after each step. A failed save never blocks the person; the answers stay on screen. */
+  async function persist(next: Answers, step: number) {
+    if (!(await ensureDraft())) { setSaveState("error"); return; }
+    const r = await saveDraft(next, step);
+    if (!r.ok && r.error.code === "NO_DRAFT") markDraft(false);
+    setSaveState(r.ok ? "saved" : "error");
+  }
 
   const set: SetFn = (id, v) => {
     setAnswers((prev) => reconcileAnswers(pruneHidden(qs, { ...prev, [id]: v })));
@@ -152,18 +190,56 @@ export function OnboardingFlow() {
 
   function restart() { setAnswers({}); setIndex(0); setStopped(false); setError(""); }
 
+  function resume() {
+    if (!pending) return;
+    const restored = pending.answers;
+    setAnswers(restored);
+    setLang(restored["language"] === "ne" ? "ne" : "en");
+    setIndex(Math.min(pending.step, visibleQuestions(qs, restored).length));
+    setPhase("flow");
+  }
+
+  async function deleteSaved() {
+    await deleteDraft();
+    markDraft(false); setSaveState("idle"); setPending(null); restart(); setPhase("flow");
+  }
+
+  function stopMinor() {
+    setAnswers({}); setStopped(true);
+    if (draftRef.current) { void deleteDraft(); markDraft(false); } // nothing about a minor is kept
+  }
+
   function next() {
     if (!q) return;
     const code = validateAnswer(q, value, new Date(), answers);
-    if (code === "minor") { setAnswers({}); setStopped(true); return; } // keep nothing
+    if (code === "minor") { stopMinor(); return; }
     if (code) { setError(t.errors[code]); return; }
-    if (answers[q.id] === undefined && value !== undefined) set(q.id, value);
-    setIndex((i) => i + 1);
+    const committed = answers[q.id] === undefined && value !== undefined ? reconcileAnswers(pruneHidden(qs, { ...answers, [q.id]: value })) : answers;
+    if (committed !== answers) setAnswers(committed);
+    setIndex(index + 1);
+    void persist(committed, index + 1);
   }
 
-  function skip() { if (q) { set(q.id, undefined); setIndex((i) => i + 1); } }
+  function skip() {
+    if (!q) return;
+    const cleared = reconcileAnswers(pruneHidden(qs, { ...answers, [q.id]: undefined }));
+    setAnswers(cleared); setError(""); setIndex(index + 1);
+    void persist(cleared, index + 1);
+  }
 
-  const shell = (body: React.ReactNode) => (
+  async function chooseConsent(granted: boolean) {
+    if (!q) return;
+    set(q.id, granted);
+    if (!(await ensureDraft())) { setSaveState("error"); }
+    else {
+      const r = await recordConsent(granted, lang);
+      if (!r.ok) setSaveState("error");
+      else if (granted) await persist({ ...answers, consent_health: true }, index + 1);
+    }
+    if (granted) setIndex((i) => i + 1);
+  }
+
+  const shell = (body: React.ReactNode, note = false) => (
     <main className="app-bg min-h-screen">
       <header className="mx-auto flex max-w-xl items-center justify-between px-4 py-4">
         <span className="text-xl font-bold text-brand">FitSewa</span>
@@ -176,10 +252,24 @@ export function OnboardingFlow() {
           ))}
         </div>
       </header>
-      <div className="mx-auto max-w-xl px-4 pb-10">{body}</div>
+      <div className="mx-auto max-w-xl px-4 pb-6">{body}</div>
+      <footer className="mx-auto max-w-xl space-y-2 px-4 pb-10 text-xs text-inkmuted">
+        {note && <p>{sv.privacyNote}</p>}
+        {saveState === "saved" && <p role="status">{sv.saved}</p>}
+        {saveState === "error" && <p role="status" className="text-bad">{sv.saveFailed}</p>}
+        {hasDraft && <button type="button" onClick={() => void deleteSaved()} className="underline underline-offset-4">{sv.deleteSaved}</button>}
+      </footer>
     </main>
   );
 
+  if (phase === "loading") return shell(<Card><p className="text-inkmuted">...</p></Card>);
+  if (phase === "resume") {
+    return shell(<Card><h1 className="text-2xl font-bold tracking-tight">{sv.welcomeBack}</h1><p className="mt-3 text-inkmuted">{sv.welcomeBody}</p>
+      <div className="mt-5 flex flex-col gap-3">
+        <Button onClick={resume}>{sv.continueSaved}</Button>
+        <Button variant="secondary" onClick={() => void deleteSaved()}>{sv.startFresh}</Button>
+      </div></Card>);
+  }
   if (stopped) {
     return shell(<Card><h1 className="text-2xl font-bold tracking-tight">{t.minorTitle}</h1><p className="mt-3 text-inkmuted">{t.minorBody}</p>
       <Button variant="secondary" className="mt-5" onClick={restart}>{t.startAgain}</Button></Card>);
@@ -214,8 +304,8 @@ export function OnboardingFlow() {
           <>
             <ul className="mt-4 list-disc space-y-1 pl-5 text-sm">{c.bullets?.map((b) => <li key={b}>{b}</li>)}</ul>
             <div className="mt-5 flex flex-col gap-3">
-              <Button onClick={() => { set(q.id, true); setIndex((i) => i + 1); }}>{c.options?.agree}</Button>
-              <Button variant="secondary" onClick={() => set(q.id, false)}>{c.options?.decline}</Button>
+              <Button onClick={() => void chooseConsent(true)}>{c.options?.agree}</Button>
+              <Button variant="secondary" onClick={() => void chooseConsent(false)}>{c.options?.decline}</Button>
             </div>
           </>
         )}
@@ -261,6 +351,7 @@ export function OnboardingFlow() {
           <div className="mt-4"><Button variant="ghost" onClick={() => setIndex((i) => Math.max(i - 1, 0))}>{t.back}</Button></div>
         )}
       </Card>
-    </>
+    </>,
+    index === 0 || q.type === "consent"
   );
 }

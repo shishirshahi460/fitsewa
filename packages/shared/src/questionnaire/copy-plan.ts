@@ -33,7 +33,7 @@ const en = {
   progressTitle: "Progress", now: "Where you are now", goalWeight: "Target", milestones: "Suggested milestones",
   milestoneWeight: "Reach {w}", habit1: "Log your food on 5 days in a week", habit2: "Complete your planned workouts for 2 weeks in a row",
   habit3: "Build up towards your weekly activity target", noDates: "These are steps to aim for, not promises or dates.",
-  createAccount: "Create an account", devNote: "Development preview: your answers are not saved yet."
+  createAccount: "Create an account", devNote: "Development preview: your saved answers are not linked to an account yet."
 } as const;
 
 export type PlanUi = Record<keyof typeof en, string>;
@@ -71,7 +71,7 @@ const ne: PlanUi = {
   progressTitle: "प्रगति", now: "तपाईं अहिले कहाँ हुनुहुन्छ", goalWeight: "लक्ष्य", milestones: "सुझाव गरिएका माइलस्टोन",
   milestoneWeight: "{w} पुग्ने", habit1: "हप्तामा ५ दिन आफ्नो खाना रेकर्ड गर्नुहोस्", habit2: "लगातार २ हप्ता योजना गरेका वर्कआउट पूरा गर्नुहोस्",
   habit3: "आफ्नो साप्ताहिक गतिविधि लक्ष्यतर्फ क्रमशः बढ्नुहोस्", noDates: "यी लक्ष्य गर्न सकिने कदम हुन्, प्रतिज्ञा वा मिति होइनन्।",
-  createAccount: "खाता बनाउनुहोस्", devNote: "विकास पूर्वावलोकन: तपाईंका उत्तर अहिले सुरक्षित गरिएको छैन।"
+  createAccount: "खाता बनाउनुहोस्", devNote: "विकास पूर्वावलोकन: तपाईंका सुरक्षित गरिएका उत्तर अहिले खातासँग जोडिएका छैनन्।"
 };
 
 export const planUi: Record<Lang, PlanUi> = { en, ne };
