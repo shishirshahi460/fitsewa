@@ -3,6 +3,8 @@
 export const maxDuration = 60; // free API hosting can take ~30-60s to wake up
 
 const API = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
+const PROXY_SECRET = process.env.PROXY_SHARED_SECRET; // server-side only, never sent to the browser
+// Only these headers are passed on, so a visitor cannot inject their own x-fitsewa-* headers.
 const FORWARD = ["content-type", "cookie", "authorization", "origin", "user-agent", "accept"];
 
 async function proxy(req: Request, ctx: { params: Promise<{ path: string[] }> }): Promise<Response> {
@@ -12,6 +14,12 @@ async function proxy(req: Request, ctx: { params: Promise<{ path: string[] }> })
   for (const name of FORWARD) {
     const value = req.headers.get(name);
     if (value) headers.set(name, value);
+  }
+  // Tell the API who the visitor really is (Vercel sets these), proven with the shared secret.
+  const visitor = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (PROXY_SECRET && visitor) {
+    headers.set("x-fitsewa-client-ip", visitor);
+    headers.set("x-fitsewa-proxy-secret", PROXY_SECRET);
   }
   const hasBody = !["GET", "HEAD"].includes(req.method);
   let upstream: Response;

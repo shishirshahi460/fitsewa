@@ -19,9 +19,16 @@ export default function Account() {
   const [understood, setUnderstood] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [savedAnswers, setSavedAnswers] = useState(false);
+  const [confirmAnswers, setConfirmAnswers] = useState(false);
+  const [answersNote, setAnswersNote] = useState("");
 
   useEffect(() => {
-    api<{ user: PublicUser }>("/users/me").then((r) => (r.ok ? setUser(r.data.user) : router.replace("/login")));
+    api<{ user: PublicUser }>("/users/me").then((r) => {
+      if (!r.ok) { router.replace("/login"); return; }
+      setUser(r.data.user);
+      api<{ saved: boolean }>("/users/me/onboarding").then((s) => s.ok && setSavedAnswers(s.data.saved));
+    });
   }, [router]);
 
   async function logout() {
@@ -47,6 +54,12 @@ export default function Account() {
     setExportNote("Your file has been downloaded.");
   }
 
+  async function deleteAnswers() {
+    const r = await api("/users/me/onboarding", { method: "DELETE" });
+    if (r.ok) { setSavedAnswers(false); setConfirmAnswers(false); setAnswersNote("Your saved answers have been deleted."); }
+    else setAnswersNote(r.error.message);
+  }
+
   async function deleteAccount(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!understood) { setDeleteError("Please confirm that you understand."); return; }
@@ -62,7 +75,7 @@ export default function Account() {
     <main className="app-bg flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
         <Card>
-          <h1 className="text-2xl font-bold tracking-tight">Your account</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{user.displayName ? `Hello, ${user.displayName}` : "Your account"}</h1>
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-4"><dt className="text-inkmuted">Email</dt><dd className="font-medium">{user.email}</dd></div>
             <div className="flex justify-between gap-4"><dt className="text-inkmuted">Role</dt><dd><Badge>{user.role}</Badge></dd></div>
@@ -75,13 +88,33 @@ export default function Account() {
               {note && <p role="status" className="mt-2 text-inkmuted">{note}</p>}
             </div>
           )}
-          <p className="mt-4 text-sm text-inkmuted">Onboarding, dashboard and profile editing are coming in the next milestones.</p>
+          <p className="mt-4 text-sm text-inkmuted">Dashboard, food logging and workouts are coming in the next milestones.</p>
           <Button variant="secondary" className="mt-5" onClick={logout}>Sign out</Button>
         </Card>
 
         <Card>
+          <h2 className="text-xl font-bold">Your health and lifestyle answers</h2>
+          {savedAnswers ? (
+            <>
+              <p className="mt-2 text-sm text-inkmuted">Your onboarding answers are saved with your account. Deleting them also withdraws your consent for this information. Your account stays.</p>
+              {!confirmAnswers ? (
+                <Button variant="secondary" className="mt-4" onClick={() => setConfirmAnswers(true)}>Delete my saved answers</Button>
+              ) : (
+                <div className="mt-4 flex gap-2">
+                  <Button variant="danger" onClick={deleteAnswers}>Yes, delete them</Button>
+                  <Button variant="ghost" onClick={() => setConfirmAnswers(false)}>Cancel</Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-inkmuted">You have no saved health or lifestyle answers.</p>
+          )}
+          {answersNote && <p role="status" className="mt-2 text-sm text-inkmuted">{answersNote}</p>}
+        </Card>
+
+        <Card>
           <h2 className="text-xl font-bold">Your data</h2>
-          <p className="mt-2 text-sm text-inkmuted">Download a copy of the information we hold about you, as a file you can keep.</p>
+          <p className="mt-2 text-sm text-inkmuted">Download a copy of the information we hold about you, including your saved answers and consent records, as a file you can keep.</p>
           <Button variant="secondary" className="mt-4" onClick={downloadData}>Download my data</Button>
           {exportNote && <p role="status" className="mt-2 text-sm text-inkmuted">{exportNote}</p>}
         </Card>
@@ -89,7 +122,7 @@ export default function Account() {
         <Card>
           <h2 className="text-xl font-bold">Delete my account</h2>
           <p className="mt-2 text-sm text-inkmuted">
-            This permanently deletes your account, your sign-in sessions and your security tokens. Records of security events are kept without your name, email or address.
+            This permanently deletes your account, your saved answers, your consent records, your sign-in sessions and your security tokens. Records of security events are kept without your name, email or address.
             This cannot be undone. You may want to download your data first.
           </p>
           {!showDelete ? (

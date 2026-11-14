@@ -277,7 +277,7 @@ export function OnboardingFlow() {
   if (answers["consent_health"] === false) {
     return shell(<Card><h1 className="text-2xl font-bold tracking-tight">{t.declinedTitle}</h1><p className="mt-3 text-inkmuted">{t.declinedBody}</p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Link href="/register" className="inline-flex min-h-12 items-center rounded-card bg-brand px-5 text-sm font-semibold text-onbrand">{t.createAccount}</Link>
+        <Link href="/start/account" className="inline-flex min-h-12 items-center rounded-card bg-brand px-5 text-sm font-semibold text-onbrand">{t.createAccount}</Link>
         <Button variant="secondary" onClick={() => { set("consent_health", undefined); }}>{t.back}</Button>
       </div></Card>);
   }

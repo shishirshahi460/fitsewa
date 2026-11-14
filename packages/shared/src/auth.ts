@@ -29,6 +29,18 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export const loginSchema = z.object({ email, password: z.string().min(1).max(128) });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/** Version of the terms text. It stays "draft-v0" until real terms are published after legal review. */
+export const TERMS_TEXT_VERSION = "draft-v0";
+
+export const convertDraftSchema = z.object({
+  fullName: z.string().trim().min(2, "Enter your full name.").max(80, "Use at most 80 characters."),
+  email,
+  password: passwordSchema,
+  acceptTerms: z.literal(true, { error: "You must accept the terms to continue." }),
+  marketingOptIn: z.boolean().default(false)
+});
+export type ConvertDraftInput = z.infer<typeof convertDraftSchema>;
+
 const tokenField = z.string().min(20, "This link is not valid.").max(200, "This link is not valid.");
 export const verifyEmailSchema = z.object({ token: tokenField });
 export const forgotPasswordSchema = z.object({ email });
@@ -40,5 +52,6 @@ export interface PublicUser {
   email: string;
   role: UserRole;
   emailVerified: boolean;
+  displayName?: string;
   createdAt: string;
 }

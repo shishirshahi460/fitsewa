@@ -26,8 +26,7 @@ export function onboardingRoutes(config: Config) {
     windowMs: 15 * 60 * 1000, limit: config.NODE_ENV === "test" ? 1000 : max, standardHeaders: "draft-8", legacyHeaders: false,
     handler: (_req, _res, next) => next(new HttpError(429, "RATE_LIMITED", "Too many requests. Try again later."))
   });
-  // All website visitors currently reach the API from one shared address, so these limits are for the whole site. Per-visitor limits come with the client-address fix.
-  const createLimiter = limit(100), saveLimiter = limit(1500);
+  const createLimiter = limit(20), saveLimiter = limit(600); // per visitor address
   const cookieOpts = { httpOnly: true, secure: config.isProd, sameSite: "lax" as const, path: "/api/v1/onboarding" };
   const ring = config.encryption;
 

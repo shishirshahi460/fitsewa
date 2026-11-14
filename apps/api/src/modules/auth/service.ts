@@ -10,13 +10,13 @@ export interface Ctx { ip?: string; userAgent?: string }
 export interface AuthResult { user: PublicUser; accessToken: string; refreshToken: string }
 
 export const toPublic = (u: UserDoc): PublicUser => ({
-  id: String(u._id), email: u.email, role: u.role as PublicUser["role"], emailVerified: u.emailVerified, createdAt: u.createdAt.toISOString()
+id: String(u._id), email: u.email, role: u.role as PublicUser["role"], emailVerified: u.emailVerified, displayName: u.displayName ?? undefined, createdAt: u.createdAt.toISOString()
 });
 
 const audit = (action: string, ctx: Ctx, userId?: Types.ObjectId, meta?: unknown) =>
   AuditLog.create({ action, userId, ip: ctx.ip, meta }).catch((e) => console.error("audit failed", e));
 
-async function issue(user: UserDoc, config: Config, ctx: Ctx): Promise<AuthResult> {
+export async function issue(user: UserDoc, config: Config, ctx: Ctx): Promise<AuthResult> {
   const refreshToken = newRefreshToken();
   await Session.create({
     userId: user._id, tokenHash: hashToken(refreshToken), userAgent: ctx.userAgent,

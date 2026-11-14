@@ -157,7 +157,7 @@ export function Results({ answers, lang, onBack }: { answers: Answers; lang: Lan
         <p className="text-sm text-inkmuted">{p.devNote}</p>
         <div className="mt-4 flex items-center justify-between gap-3">
           <Button variant="ghost" onClick={() => setView("summary")}>{t.back}</Button>
-          <LinkButton href="/register">{p.createAccount}</LinkButton>
+          <LinkButton href="/start/account">{p.createAccount}</LinkButton>
         </div>
       </Card>
     </div>

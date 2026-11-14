@@ -10,6 +10,7 @@ const userSchema = new Schema(
     role: { type: String, enum: USER_ROLES, default: "user" },
     dateOfBirth: { type: String, required: true },
     emailVerified: { type: Boolean, default: false },
+    displayName: { type: String, trim: true, maxlength: 80 },
     termsAcceptedAt: { type: Date, required: true }
   },
   { timestamps: true }

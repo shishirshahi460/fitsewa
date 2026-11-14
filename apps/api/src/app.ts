@@ -7,6 +7,8 @@ import type { Config } from "./config.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { csrfOriginCheck } from "./modules/auth/middleware.js";
 import { accountRoutes } from "./modules/auth/account.js";
+import { clientAddress } from "./modules/security/client-ip.js";
+import { convertRoutes } from "./modules/onboarding/convert.js";
 import { authRoutes, userRoutes } from "./modules/auth/routes.js";
 import { onboardingRoutes } from "./modules/onboarding/routes.js";
 
@@ -30,6 +32,7 @@ export function createApp(config: Config): Express {
   );
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
+  app.use(clientAddress(config));
 
   const v1 = express.Router();
   v1.get("/health", (_req, res) => {
@@ -45,7 +48,8 @@ export function createApp(config: Config): Express {
   v1.use("/auth", authRoutes(config));
   v1.use("/users", userRoutes(config));
   v1.use("/users", accountRoutes(config));
-    v1.use("/onboarding", onboardingRoutes(config));
+  v1.use("/onboarding", onboardingRoutes(config));
+  v1.use("/onboarding", convertRoutes(config));
   app.use(`/api/${API_VERSION}`, v1);
 
   app.use(notFoundHandler);

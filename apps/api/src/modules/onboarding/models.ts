@@ -26,5 +26,18 @@ const consentSchema = new Schema(
   { timestamps: true }
 );
 
+/** The person's saved onboarding answers once they have an account. The encrypted part is tied to the user id. */
+const userOnboardingSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    questionnaireVersion: { type: String, required: true },
+    answers: { type: Schema.Types.Mixed, default: {} },
+    sensitiveEnc: { type: String },
+    completedAt: { type: Date, required: true }
+  },
+  { timestamps: true }
+);
+
 export const OnboardingDraft = mongoose.model("OnboardingDraft", draftSchema);
 export const Consent = mongoose.model("Consent", consentSchema);
+export const UserOnboarding = mongoose.model("UserOnboarding", userOnboardingSchema);

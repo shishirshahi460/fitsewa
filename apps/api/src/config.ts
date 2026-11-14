@@ -12,6 +12,7 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default("FitSewa <onboarding@resend.dev>"),
   WEB_BASE_URL: z.url().optional(),
   DATA_ENCRYPTION_KEY: z.string().optional(),
+  PROXY_SHARED_SECRET: z.string().min(32).optional(),
   DATA_ENCRYPTION_KEY_ID: z.string().regex(/^[a-z0-9_-]{1,20}$/i).default("k1")
 });
 
@@ -25,6 +26,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const isProd = parsed.data.NODE_ENV === "production";
   if (isProd && !parsed.data.JWT_ACCESS_SECRET) throw new Error("JWT_ACCESS_SECRET (at least 32 characters) is required in production.");
   if (isProd && !parsed.data.DATA_ENCRYPTION_KEY) throw new Error("DATA_ENCRYPTION_KEY (32 random bytes, base64) is required in production.");
+  if (isProd && !parsed.data.PROXY_SHARED_SECRET) throw new Error("PROXY_SHARED_SECRET (at least 32 characters) is required in production.");
   // Development/test fallbacks only. Never used in production (checked above).
   const jwtSecret = parsed.data.JWT_ACCESS_SECRET ?? "dev-only-secret-not-for-production-use-0123456789";
   const key = parsed.data.DATA_ENCRYPTION_KEY

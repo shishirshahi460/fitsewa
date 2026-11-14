@@ -10,3 +10,4 @@ export * from "./copy.js";
 export * from "./copy-plan.js";
 export * from "./copy-save.js";
 export * from "./onboarding.js";
+export * from "./copy-account.js";
