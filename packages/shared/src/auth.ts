@@ -20,7 +20,7 @@ export const registerSchema = z.object({
   dateOfBirth: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD.")
-    .refine((v) => new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), "Enter a real date.")
+    .refine((v) => { const d = new Date(`${v}T00:00:00Z`); return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v); }, "Enter a real date.")
     .refine((v) => isAdult(v), `You must be ${MIN_AGE} or older to use FitSewa.`),
   acceptTerms: z.literal(true, { error: "You must accept the terms to continue." })
 });

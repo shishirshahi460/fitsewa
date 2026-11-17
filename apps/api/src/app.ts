@@ -10,6 +10,7 @@ import { accountRoutes } from "./modules/auth/account.js";
 import { clientAddress } from "./modules/security/client-ip.js";
 import { convertRoutes } from "./modules/onboarding/convert.js";
 import { authRoutes, userRoutes } from "./modules/auth/routes.js";
+import { nutritionRoutes } from "./modules/nutrition/routes.js";
 import { onboardingRoutes } from "./modules/onboarding/routes.js";
 
 export function createApp(config: Config): Express {
@@ -50,6 +51,7 @@ export function createApp(config: Config): Express {
   v1.use("/users", accountRoutes(config));
   v1.use("/onboarding", onboardingRoutes(config));
   v1.use("/onboarding", convertRoutes(config));
+  v1.use(nutritionRoutes(config));
   app.use(`/api/${API_VERSION}`, v1);
 
   app.use(notFoundHandler);

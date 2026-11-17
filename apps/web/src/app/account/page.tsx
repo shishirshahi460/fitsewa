@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PublicUser } from "@fitsewa/shared";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Badge, Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/input";
 
@@ -88,8 +88,11 @@ export default function Account() {
               {note && <p role="status" className="mt-2 text-inkmuted">{note}</p>}
             </div>
           )}
-          <p className="mt-4 text-sm text-inkmuted">Dashboard, food logging and workouts are coming in the next milestones.</p>
-          <Button variant="secondary" className="mt-5" onClick={logout}>Sign out</Button>
+          <p className="mt-4 text-sm text-inkmuted">Workouts, water and progress charts are coming in the next milestones.</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <LinkButton href="/diary">Open my food diary</LinkButton>
+            <Button variant="secondary" onClick={logout}>Sign out</Button>
+          </div>
         </Card>
 
         <Card>

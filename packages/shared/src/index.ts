@@ -3,6 +3,7 @@ import { z } from "zod";
 export * from "./constants.js";
 export * from "./auth.js";
 export * from "./questionnaire/index.js";
+export * from "./nutrition.js";
 
 export const healthResponseSchema = z.object({
   status: z.literal("ok"),
