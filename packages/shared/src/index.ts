@@ -4,6 +4,7 @@ export * from "./constants.js";
 export * from "./auth.js";
 export * from "./questionnaire/index.js";
 export * from "./nutrition.js";
+export * from "./fitness.js";
 
 export const healthResponseSchema = z.object({
   status: z.literal("ok"),

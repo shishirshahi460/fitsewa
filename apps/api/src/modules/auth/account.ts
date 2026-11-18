@@ -4,7 +4,9 @@ import type { ZodType } from "zod";
 import { CONSENT_TEXT_VERSION, deleteAccountSchema } from "@fitsewa/shared";
 import type { Config } from "../../config.js";
 import { HttpError } from "../../errors.js";
+import { WorkoutLog } from "../fitness/models.js";
 import { FoodLog } from "../nutrition/models.js";
+import { FoodFavorite } from "../nutrition/shortcuts.js";
 import { Consent, UserOnboarding } from "../onboarding/models.js";
 import { unpackAnswers } from "../onboarding/service.js";
 import { ACCESS_COOKIE, REFRESH_COOKIE, requireAuth } from "./middleware.js";
@@ -45,12 +47,14 @@ export function accountRoutes(config: Config) {
     const userId = req.auth!.userId;
     const user = (await User.findById(userId)) as UserDoc | null;
     if (!user) throw new HttpError(404, "NOT_FOUND", "User not found.");
-    const [sessions, activity, consents, onboarding, foodDiary] = await Promise.all([
+    const [sessions, activity, consents, onboarding, foodDiary, workouts, favoriteFoods] = await Promise.all([
       Session.find({ userId }).select("createdAt expiresAt revokedAt userAgent -_id").lean(),
       AuditLog.find({ userId }).select("action ip createdAt -_id").sort({ createdAt: 1 }).lean(),
       Consent.find({ userId }).select("purpose textVersion granted locale createdAt -_id").sort({ createdAt: 1 }).lean(),
       UserOnboarding.findOne({ userId }),
-      FoodLog.find({ userId }).select("date meal nameEn quantity unitLabelEn grams nutrients status createdAt -_id").sort({ date: 1, createdAt: 1 }).lean()
+      FoodLog.find({ userId }).select("date meal nameEn quantity unitLabelEn grams nutrients status createdAt -_id").sort({ date: 1, createdAt: 1 }).lean(),
+      WorkoutLog.find({ userId }).select("date name durationMin notes exercises createdAt -_id").sort({ date: 1 }).lean(),
+      FoodFavorite.find({ userId }).select("foodSlug createdAt -_id").lean()
     ]);
     await AuditLog.create({ userId: user._id, action: "account.data_exported", ip: req.ip });
     res.setHeader("Content-Disposition", 'attachment; filename="fitsewa-my-data.json"');
@@ -66,7 +70,7 @@ export function accountRoutes(config: Config) {
             answers: unpackAnswers(onboarding.answers, onboarding.sensitiveEnc, config.encryption, String(userId))
           }
         : null,
-      consents, foodDiary, sessions, activity
+      consents, foodDiary, workouts, favoriteFoods, sessions, activity
     });
   });
 
@@ -82,6 +86,8 @@ export function accountRoutes(config: Config) {
     await Session.deleteMany({ userId: user._id });
     await EmailToken.deleteMany({ userId: user._id });
     await FoodLog.deleteMany({ userId: user._id });
+    await FoodFavorite.deleteMany({ userId: user._id });
+    await WorkoutLog.deleteMany({ userId: user._id });
     await UserOnboarding.deleteMany({ userId: user._id });
     await Consent.deleteMany({ userId: user._id });
     await AuditLog.updateMany({ userId: user._id }, { $unset: { userId: "", ip: "", meta: "" } }); // keep events, drop identity

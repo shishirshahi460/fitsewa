@@ -30,7 +30,8 @@ export interface LogEntryDto {
   id: string; date: string; meal: Meal; foodSlug: string; nameEn: string; nameNe: string; status: VerificationStatus;
   quantity: number; unitId: string; unitLabelEn: string; unitLabelNe: string; grams: number; nutrients: NutrientSet;
 }
-
+/** A food from the recent list, with the portion last used so it can be added again in one tap. */
+export interface RecentFoodDto extends FoodDto { lastUnitId: string; lastQuantity: number }
 export interface DayDto { date: string; entries: LogEntryDto[]; totals: NutrientSet; counts: { entries: number; notVerified: number } }
 
 export interface TargetsDto {
